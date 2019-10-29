@@ -3,6 +3,7 @@ package servlet;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,8 +18,10 @@ import org.apache.commons.io.IOUtils;
 
 import com.google.gson.Gson;
 
-import dao.AlunoDAO;
+import dao.AlunoDAOJDBC;
+import dao.AlunoDAOJPA;
 import factory.ConnectionFactory;
+import factory.JpaFactory;
 import modelo.Aluno;
 
 @WebServlet("/alunos")
@@ -33,7 +36,7 @@ public class AlunosServlet extends HttpServlet {
 		String jsp = req.getParameter("jsp");
 
 		if (jsp != null && !jsp.isEmpty()) {
-			req.setAttribute("alunos", mapaDeAlunos.values());
+			req.setAttribute("alunos", buscarAlunos());
 			RequestDispatcher requestDispatcher = req.getRequestDispatcher("/alunos.jsp");
 			requestDispatcher.forward(req, resp);
 			return;
@@ -42,8 +45,15 @@ public class AlunosServlet extends HttpServlet {
 		if (id != null && !id.isEmpty()) {
 			retornarJson(resp, mapaDeAlunos.get(Integer.parseInt(id)));
 		} else {
-			retornarJson(resp, mapaDeAlunos.values());
+			retornarJson(resp, buscarAlunos());
 		}
+	}
+
+	private Collection<Aluno> buscarAlunos() {
+//		return mapaDeAlunos.values();
+		
+//		return new AlunoDAOJDBC(new ConnectionFactory().getConexao()).listar();
+		return new AlunoDAOJPA(JpaFactory.getEntityManager()).listar();
 	}
 
 	@Override
@@ -56,20 +66,25 @@ public class AlunosServlet extends HttpServlet {
 		salvarAlunoNaBaseDeDados(aluno);
 //		salvarAlunoEmMemoria(aluno);
 
-		System.out.println("total de alunos!" + mapaDeAlunos.size());
+		
 		retornarJson(resp, aluno);
 	}
 
 	private void salvarAlunoNaBaseDeDados(Aluno aluno) {
 
-		AlunoDAO alunoDAO = new AlunoDAO(new ConnectionFactory().getConexao());
-		
+		AlunoDAOJDBC alunoDAO = new AlunoDAOJDBC(new ConnectionFactory().getConexao());
+		alunoDAO.salvar(aluno);
+
+//		AlunoDAOJPA alunoDAOJPA = new AlunoDAOJPA(JpaFactory.getEntityManager());
+//		alunoDAOJPA.salvar(aluno);
+
 	}
 
 	private void salvarAlunoEmMemoria(Aluno aluno) {
 		int idAlunos = mapaDeAlunos.size() + 1;
 		aluno.setId(idAlunos);
 		mapaDeAlunos.put(aluno.getId(), aluno);
+		System.out.println("total de alunos!" + mapaDeAlunos.size());
 	}
 
 	private String recuperarJsonDaRequisicao(HttpServletRequest req) throws IOException {
